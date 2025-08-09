@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Wallet, Menu, X } from 'lucide-react'
@@ -9,6 +9,7 @@ export default function Navbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
   const [isConnected, setIsConnected] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -17,10 +18,29 @@ export default function Navbar() {
     { name: 'Portfolio', href: '/portfolio' },
   ]
 
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   return (
-    <nav className="bg-white shadow-sm border-b">
+    <nav className={`
+        fixed top-0 left-0 right-0 z-50 transition-all duration-300
+        ${isScrolled 
+          ? 'bg-white bg-opacity-20 backdrop-blur-md shadow-lg border-b border-white/10' 
+          : 'bg-white bg-opacity-5 shadow-sm border-b border-white/10'
+        }
+        rounded-b-xl
+      `}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
+          
+          {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -30,7 +50,6 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* Desktop menu */}
           <div className="hidden md:flex items-center space-x-8">
             {navigation.map((item) => (
               <Link
@@ -38,9 +57,9 @@ export default function Navbar() {
                 href={item.href}
                 className={`${
                   pathname === item.href
-                    ? 'text-blue-600'
-                    : 'text-gray-700 hover:text-blue-600'
-                } px-3 py-2 text-sm font-medium`}
+                    ? 'text-[#A64D79]'
+                    : 'text-white hover:text-[#A64D79]'
+                } px-3 py-2 text-sm font-medium transform duration-300`}
               >
                 {item.name}
               </Link>
@@ -50,52 +69,13 @@ export default function Navbar() {
           <div className="hidden md:flex items-center">
             <button
               onClick={() => setIsConnected(!isConnected)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              className="bg-white text-[#3B1C32] text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#A64D79] hover:text-white flex items-center space-x-2 duration-300"
             >
               <Wallet className="w-4 h-4" />
               <span>{isConnected ? '0x1234...5678' : 'Connect Wallet'}</span>
             </button>
           </div>
-
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="text-gray-700"
-            >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
         </div>
-
-        {/* Mobile menu */}
-        {isOpen && (
-          <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`${
-                    pathname === item.href
-                      ? 'text-blue-600 bg-blue-50'
-                      : 'text-gray-700'
-                  } block px-3 py-2 text-base font-medium`}
-                  onClick={() => setIsOpen(false)}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              <button
-                onClick={() => setIsConnected(!isConnected)}
-                className="w-full mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center justify-center space-x-2"
-              >
-                <Wallet className="w-4 h-4" />
-                <span>{isConnected ? '0x1234...5678' : 'Connect Wallet'}</span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </nav>
   )
