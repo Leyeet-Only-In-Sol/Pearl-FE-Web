@@ -11,12 +11,10 @@ export const Card: React.FC<CardProps> = ({
   className = '', 
   hover = false 
 }) => {
+  const cardClass = hover ? 'card-hover' : 'card';
+  
   return (
-    <div className={`
-      bg-white rounded-xl border border-gray-200 shadow-sm
-      ${hover ? 'hover:shadow-lg hover:border-gray-300 transition-all duration-200 cursor-pointer' : ''}
-      ${className}
-    `}>
+    <div className={`${cardClass} ${className}`}>
       {children}
     </div>
   );

@@ -1,26 +1,23 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
-import { Navbar } from '@/components/layout/Navbar';
+import './globals.css'
+import { Inter } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'DeFiLabs - Decentralized Finance Platform',
-  description: 'Advanced DeFi platform for liquidity provision and yield farming',
-};
+export const metadata = {
+  title: 'Simple DeFi',
+  description: 'A simple DeFi platform',
+}
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-        <Navbar />
-        <main>{children}</main>
+      <body className={inter.className}>
+        {children}
       </body>
     </html>
-  );
+  )
 }
