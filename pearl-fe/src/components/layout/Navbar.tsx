@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Wallet, Menu, X } from 'lucide-react'
+import Logo from '../../assets/pearl_logo.png'
+import Image from 'next/image'
 
 export default function Navbar() {
   const pathname = usePathname()
@@ -43,10 +45,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">D</span>
-              </div>
-              <span className="font-bold text-xl">DeFi</span>
+              <Image src={Logo} alt="Pearl" className='h-12 w-12'/>
             </Link>
           </div>
 

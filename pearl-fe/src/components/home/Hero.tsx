@@ -17,8 +17,8 @@ export const Hero: React.FC = () => {
         <section className="pt-20 text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
             <div className="text-center">
-              <h1 className="text-4xl md:text-6xl font-semibold mb-6">
-                Simple DeFi Platform
+              <h1 className="text-4xl md:text-5xl font-semibold mb-6">
+                Where Finance Meets Brilliance
               </h1>
               <p className="text-xl mb-8 text-white">
                 Swap, provide liquidity, and earn rewards with ease
