@@ -3,13 +3,20 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Wallet, Menu, X } from 'lucide-react'
+import { Wallet, Menu, X, LogOut } from 'lucide-react'
+import { useWalletConnection } from '@/hooks/useWalletConnection'
 
 export default function Navbar() {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [isConnected, setIsConnected] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const { 
+    isConnected, 
+    formattedAddress, 
+    connectWithGoogle, 
+    disconnectWallet,
+    googleWallet 
+  } = useWalletConnection()
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -27,6 +34,17 @@ export default function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+  const handleConnect = () => {
+    if (googleWallet) {
+      connectWithGoogle()
+    } else {
+      console.log('Google wallet not available')
+    }
+  }
+
+  const handleDisconnect = () => {
+    disconnectWallet()
+  }
 
   return (
     <nav className={`
@@ -66,14 +84,31 @@ export default function Navbar() {
             ))}
           </div>
 
+          {/* Desktop wallet button */}
           <div className="hidden md:flex items-center">
-            <button
-              onClick={() => setIsConnected(!isConnected)}
-              className="bg-white text-[#3B1C32] text-sm font-medium px-3 py-2 rounded-lg hover:bg-[#A64D79] hover:text-white flex items-center space-x-2 duration-300"
-            >
-              <Wallet className="w-4 h-4" />
-              <span>{isConnected ? '0x1234...5678' : 'Connect Wallet'}</span>
-            </button>
+            {isConnected ? (
+              <div className="flex items-center space-x-2">
+                <div className="bg-green-100 text-green-800 px-3 py-2 rounded-lg flex items-center space-x-2">
+                  <Wallet className="w-4 h-4" />
+                  <span className="text-sm font-medium">{formattedAddress}</span>
+                </div>
+                <button
+                  onClick={handleDisconnect}
+                  className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 flex items-center space-x-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnect}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                disabled={!googleWallet}
+              >
+                <Wallet className="w-4 h-4" />
+                <span>Connect with Google</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
