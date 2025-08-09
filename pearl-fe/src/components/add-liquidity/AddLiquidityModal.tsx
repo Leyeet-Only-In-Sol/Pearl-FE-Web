@@ -1,7 +1,9 @@
+// pearl-fe/src/components/add-liquidity/AddLiquidityModal.tsx
 'use client'
 
 import React, { useState } from 'react'
-import { X, TrendingUp, DollarSign, BarChart3, Settings } from 'lucide-react'
+import { X, TrendingUp, DollarSign, BarChart3, Settings, Coins } from 'lucide-react'
+import { useTestTokens } from '@/hooks/useTestTokens'
 
 interface AddLiquidityModalProps {
   isOpen: boolean
@@ -25,6 +27,15 @@ export default function AddLiquidityModal({
   const [numBins, setNumBins] = useState(10)
   const [suiAmount, setSuiAmount] = useState('')
   const [usdcAmount, setUsdcAmount] = useState('')
+
+  // Test tokens hook
+  const { 
+    loading: tokenLoading, 
+    error: tokenError, 
+    mintTestUSDC, 
+    getLiquidityTokens, 
+    isReady: tokenReady 
+  } = useTestTokens()
 
   const strategies = [
     {
@@ -61,6 +72,15 @@ export default function AddLiquidityModal({
     { price: 2200, liquidity: 15 },
     { price: 2250, liquidity: 0 },
   ]
+
+  // Handle test token minting
+  const handleMintTestUSDC = async () => {
+    await mintTestUSDC() // Mints default 1000 USDC
+  }
+
+  const handleGetLiquidityTokens = async () => {
+    await getLiquidityTokens() // Mints 10,000 USDC for LP
+  }
 
   if (!isOpen) return null
 
@@ -218,7 +238,7 @@ export default function AddLiquidityModal({
                           U
                         </div>
                         <div>
-                          <div className="font-medium text-white">USDC</div>
+                          <div className="font-medium text-white">TEST_USDC</div>
                           <div className="text-white/60 text-sm">≈ $1.00 each</div>
                         </div>
                       </div>
@@ -275,6 +295,61 @@ export default function AddLiquidityModal({
 
                 {activeTab === 'deposit' && (
                   <>
+                    {/* Test Token Minting Section */}
+                    <div className="
+                      rounded-xl bg-gradient-to-r from-green-500/10 to-blue-500/10 
+                      backdrop-blur-sm border border-green-500/20 p-6
+                    ">
+                      <h3 className="text-lg font-semibold text-white mb-3 flex items-center">
+                        <Coins className="w-5 h-5 mr-2" />
+                        Get Test Tokens (Testnet)
+                      </h3>
+                      
+                      {tokenError && (
+                        <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                          <div className="text-red-300 text-sm">{tokenError}</div>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          onClick={handleMintTestUSDC}
+                          disabled={!tokenReady || tokenLoading}
+                          className="
+                            flex items-center justify-center space-x-2 py-3 px-4 
+                            rounded-lg font-medium text-sm
+                            bg-green-600/20 border border-green-500/30
+                            text-green-300 hover:bg-green-600/30 hover:border-green-500/50
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            transition-all duration-200
+                          "
+                        >
+                          <Coins className="w-4 h-4" />
+                          <span>{tokenLoading ? 'Minting...' : '1,000 USDC'}</span>
+                        </button>
+                        
+                        <button
+                          onClick={handleGetLiquidityTokens}
+                          disabled={!tokenReady || tokenLoading}
+                          className="
+                            flex items-center justify-center space-x-2 py-3 px-4 
+                            rounded-lg font-medium text-sm
+                            bg-blue-600/20 border border-blue-500/30
+                            text-blue-300 hover:bg-blue-600/30 hover:border-blue-500/50
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            transition-all duration-200
+                          "
+                        >
+                          <Coins className="w-4 h-4" />
+                          <span>{tokenLoading ? 'Minting...' : '10,000 USDC'}</span>
+                        </button>
+                      </div>
+                      
+                      <div className="mt-3 text-xs text-white/60">
+                        💡 Get test USDC tokens to provide liquidity. 10,000 USDC recommended for LP.
+                      </div>
+                    </div>
+
                     {/* Deposit Liquidity */}
                     <div className="
                       rounded-xl bg-white/5 backdrop-blur-sm 
@@ -308,7 +383,7 @@ export default function AddLiquidityModal({
 
                         {/* USDC Input */}
                         <div>
-                          <label className="block text-sm font-medium text-white/90 mb-2">USDC Amount</label>
+                          <label className="block text-sm font-medium text-white/90 mb-2">TEST_USDC Amount</label>
                           <div className="relative">
                             <input
                               type="number"
@@ -326,7 +401,7 @@ export default function AddLiquidityModal({
                               MAX
                             </button>
                           </div>
-                          <div className="text-sm text-white/70 mt-1">Balance: 5,000 USDC</div>
+                          <div className="text-sm text-white/70 mt-1">Balance: 5,000 TEST_USDC</div>
                         </div>
                       </div>
                     </div>
@@ -483,7 +558,7 @@ export default function AddLiquidityModal({
                             <span className="text-white font-medium">1.25 SUI</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-white">USDC</span>
+                            <span className="text-white">TEST_USDC</span>
                             <span className="text-white font-medium">2,500 USDC</span>
                           </div>
                         </div>
