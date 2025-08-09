@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { Transaction } from '@mysten/sui/transactions';
 import { createTestnetClient } from '@/lib/Pearl-TS-SDK/src';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 
 interface SwapState {
   loading: boolean;
@@ -20,6 +20,8 @@ interface SwapState {
 export const useDLMMSwap = () => {
   const suiClient = useSuiClient();
   const currentAccount = useCurrentAccount();
+  const { mutate: signAndExecuteTransaction } = useSignAndExecuteTransaction();
+  
   const [state, setState] = useState<SwapState>({
     loading: false,
     error: null,
@@ -83,13 +85,13 @@ export const useDLMMSwap = () => {
     }
   }, [suiClient, currentAccount]);
 
-  // Execute swap
+  // Execute swap using zkLogin wallet
   const executeSwap = useCallback(async (
-    quote: any,
-    coinObjectId: string,
-    keypair: Ed25519Keypair
+    tokenIn: string,
+    tokenOut: string,
+    amountIn: string
   ) => {
-    if (!suiClient || !currentAccount || !quote) {
+    if (!suiClient || !currentAccount || !state.quote) {
       setState(prev => ({ ...prev, error: 'Invalid swap parameters' }));
       return null;
     }
@@ -98,71 +100,123 @@ export const useDLMMSwap = () => {
 
     try {
       console.log('⚡ Executing DLMM swap:', {
-        poolId: quote.poolId,
-        amountIn: quote.amountIn,
-        amountOutMin: quote.amountOut,
-        coinObjectId
+        poolId: state.quote.poolId,
+        amountIn,
+        amountOutMin: state.quote.amountOut,
+        tokenIn,
+        tokenOut
       });
 
-      // Create DLMM client
-      const dlmmClient = createTestnetClient(suiClient);
+      const txb = new Transaction();
+      
+      // Build swap transaction using your deployed contracts
+      txb.moveCall({
+        target: `0x6a01a88c704d76ef8b0d4db811dff4dd13104a35e7a125131fa35949d0bc2ada::dlmm_pool::swap`,
+        typeArguments: [tokenIn, tokenOut],
+        arguments: [
+          txb.object(state.quote.poolId),
+          txb.pure.u64(amountIn),
+          txb.pure.u64(state.quote.amountOut),
+          txb.pure.bool(true), // zero_for_one
+          txb.object('0x6'), // Clock object
+        ],
+      });
 
-      // Execute swap on your deployed contracts
-      const swapResult = await dlmmClient.executeSwap(
+      // Execute transaction with zkLogin wallet
+      signAndExecuteTransaction(
         {
-          poolId: quote.poolId,
-          tokenIn: quote.route.hops[0]?.tokenIn || '',
-          tokenOut: quote.route.hops[0]?.tokenOut || '',
-          amountIn: quote.amountIn,
-          amountOutMin: quote.amountOut
+          transaction: txb,
         },
-        coinObjectId,
-        keypair
+        {
+          onSuccess: (result) => {
+            console.log('✅ Swap executed successfully:', result);
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              lastSwapResult: result,
+              error: null
+            }));
+          },
+          onError: (error) => {
+            console.error('❌ Error executing swap:', error);
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              error: error.message || 'Failed to execute swap'
+            }));
+          },
+        }
       );
 
-      console.log('✅ Swap executed:', swapResult);
-
-      setState(prev => ({
-        ...prev,
-        loading: false,
-        lastSwapResult: swapResult,
-        error: swapResult.success ? null : (swapResult.error || 'Unknown error')
-      }));
-
-      return swapResult;
-
     } catch (error) {
-      console.error('❌ Error executing swap:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to execute swap';
+      console.error('❌ Error building swap transaction:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to build transaction';
       
       setState(prev => ({
         ...prev,
         loading: false,
         error: errorMessage
       }));
+    }
+  }, [suiClient, currentAccount, state.quote, signAndExecuteTransaction]);
 
+  // Get test tokens (matching your existing pattern)
+  const getTestTokens = useCallback(async () => {
+    if (!suiClient || !currentAccount) {
+      setState(prev => ({ ...prev, error: 'Wallet not connected' }));
       return null;
     }
-  }, [suiClient, currentAccount]);
 
-  // Get test tokens (for testnet)
-  const getTestTokens = useCallback(async (keypair: Ed25519Keypair) => {
-    if (!suiClient) return null;
+    setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
       console.log('🪙 Getting test tokens...');
       
-      const dlmmClient = createTestnetClient(suiClient);
-      const result = await dlmmClient.getTestTokens(keypair);
+      const txb = new Transaction();
       
-      console.log('✅ Test tokens result:', result);
-      return result;
+      // Get test USDC tokens
+      txb.moveCall({
+        target: `0x6a01a88c704d76ef8b0d4db811dff4dd13104a35e7a125131fa35949d0bc2ada::test_usdc::get_test_tokens`,
+        arguments: [
+          txb.object('0x2270d37729375d0b1446c101303f65a24677ae826ed3a39a4bb9c744f77537e9'),
+        ],
+      });
+
+      signAndExecuteTransaction(
+        {
+          transaction: txb,
+        },
+        {
+          onSuccess: (result) => {
+            console.log('✅ Test tokens received:', result);
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              error: null
+            }));
+          },
+          onError: (error) => {
+            console.error('❌ Error getting test tokens:', error);
+            setState(prev => ({
+              ...prev,
+              loading: false,
+              error: error.message || 'Failed to get test tokens'
+            }));
+          },
+        }
+      );
 
     } catch (error) {
-      console.error('❌ Error getting test tokens:', error);
-      return null;
+      console.error('❌ Error building test tokens transaction:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to build transaction';
+      
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage
+      }));
     }
-  }, [suiClient]);
+  }, [suiClient, currentAccount, signAndExecuteTransaction]);
 
   return {
     // State

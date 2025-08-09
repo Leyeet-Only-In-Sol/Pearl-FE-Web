@@ -4,7 +4,6 @@
 import { useState, useCallback } from 'react';
 import { useCurrentAccount, useSuiClient, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { createTestnetClient } from '@/lib/Pearl-TS-SDK/src';
 
 interface PoolCreationState {
   loading: boolean;
@@ -38,7 +37,19 @@ export const usePoolCreation = () => {
     try {
       console.log('🏗️ Creating SUI/TEST_USDC pool...');
       
-      const dlmmClient = createTestnetClient(suiClient);
+      // First, check if user has TEST_USDC coins
+      const coins = await suiClient.getCoins({
+        owner: currentAccount.address,
+        coinType: '0xbeb0bfff8de500ffd56210e21fc506a3e67bbef45cb65a515d72b223770e3ab2::test_usdc::TEST_USDC'
+      });
+
+      if (coins.data.length === 0) {
+        setState(prev => ({ ...prev, error: 'No TEST_USDC coins found. Please mint some first.' }));
+        return null;
+      }
+
+      // Use the first available TEST_USDC coin
+      const usdcCoinId = coins.data[0]!.coinObjectId;
       
       const txb = new Transaction();
       
@@ -46,10 +57,10 @@ export const usePoolCreation = () => {
       const SUI_TYPE = "0x2::sui::SUI";
       const TEST_USDC_TYPE = "0xbeb0bfff8de500ffd56210e21fc506a3e67bbef45cb65a515d72b223770e3ab2::test_usdc::TEST_USDC";
       
-      // Pool parameters
-      const BIN_STEP = 25; // 0.25% fee tier
-      const INITIAL_PRICE = "18446744073709551616"; // Price scaled by 2^64 (approximately 1:1)
-      const INITIAL_BIN_ID = 1000; // Starting bin
+      // Pool parameters - using safe u128 values
+      const BIN_STEP = 25; // 0.25% fee tier  
+      const INITIAL_PRICE = "18446744073709551616"; // 2^64 - safe u128 value
+      const INITIAL_BIN_ID = 0; // Start at bin 0 for simplicity
       
       console.log('📝 Pool creation parameters:', {
         tokenA: SUI_TYPE,
@@ -59,16 +70,25 @@ export const usePoolCreation = () => {
         initialBinId: INITIAL_BIN_ID
       });
 
-      // Create pool using factory
+      // Split larger amounts for initial liquidity - the math might need meaningful amounts
+      const [suiCoin] = txb.splitCoins(txb.gas, [1000000000]); // 1 SUI
+
+      // Split larger TEST_USDC amount
+      const [usdcCoin] = txb.splitCoins(txb.object(usdcCoinId), [1000000000]); // 1000 TEST_USDC
+
+      // Create pool with exactly 7 arguments as per contract
       txb.moveCall({
-        target: `${dlmmClient.addresses.PACKAGE_ID}::factory::create_and_store_pool`,
+        target: `0x6a01a88c704d76ef8b0d4db811dff4dd13104a35e7a125131fa35949d0bc2ada::factory::create_and_store_pool`,
         typeArguments: [SUI_TYPE, TEST_USDC_TYPE],
         arguments: [
-          txb.object(dlmmClient.addresses.FACTORY_ID),
-          txb.pure.u16(BIN_STEP),
-          txb.pure.u128(INITIAL_PRICE),
-          txb.pure.u32(INITIAL_BIN_ID),
-          txb.object('0x6'), // Clock object
+          txb.object('0x160e34d10029993bccf6853bb5a5140bcac1794b7c2faccc060fb3d5b7167d7f'), // arg0: Factory
+          txb.pure.u16(BIN_STEP),        // arg1: bin_step
+          txb.pure.u128(INITIAL_PRICE),  // arg2: initial_price
+          txb.pure.u32(INITIAL_BIN_ID),  // arg3: initial_bin_id
+          suiCoin,                       // arg4: Coin<T0> (SUI)
+          usdcCoin,                      // arg5: Coin<T1> (TEST_USDC)
+          txb.object('0x6'),             // arg6: Clock
+          // arg7: TxContext is auto-provided
         ],
       });
 
